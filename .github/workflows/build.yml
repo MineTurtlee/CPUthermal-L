@@ -21,6 +21,7 @@ jobs:
         env:
           THEOS: ${{ github.workspace }}/theos
         run: |
+          test -f "$THEOS/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/Preferences.framework/Preferences.tbd"
           make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless messages=yes
           mkdir -p artifacts
           cp packages/*.deb artifacts/
