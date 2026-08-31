@@ -18,7 +18,6 @@ extern kern_return_t IORegistryEntryGetName(io_registry_entry_t entry, io_name_t
 
 static NSString *const kPrefsPath = @"/var/mobile/Library/Preferences/com.riboly.cputhermal-l.plist";
 static NSString *const kStatusPath = @"/var/mobile/Library/Preferences/com.riboly.cputhermal-l.status.plist";
-static const char *kSettingsChanged = "com.riboly.cputhermal-l/settingsChanged";
 
 typedef struct {
     BOOL enabled;

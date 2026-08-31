@@ -24,6 +24,8 @@
 		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>恢复默认设置</string><key>action</key><string>resetSettings</string></dict>
 		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>项目</string></dict>
 		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>GitHub · riboly/CPUthermal-L</string><key>action</key><string>openSourceCode</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>实时监控</string><key>footerText</key><string>每秒读取 IOReport 的 ECPU/PCPU 性能状态驻留时间并换算平均频率；iOS 18 已移除 hw.cpufrequency，因此不使用 24 MHz 时基冒充 CPU 频率。</string></dict>
+		<dict><key>cell</key><string>PSTitleValueCell</string><key>id</key><string>cpuFrequency</string><key>key</key><string>liveCPUFrequency</string><key>label</key><string>实时 CPU 频率</string><key>default</key><string>正在采样…</string></dict>
 	</array>
 </dict>
 </plist>
