@@ -6,23 +6,23 @@ on:
     branches: [ main ]
 
 jobs:
-  build-rootless:
+  build-roothide:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install build dependencies
         run: brew install ldid xz dpkg
-      - name: Install Theos and patched iOS SDKs
+      - name: Install RootHide Theos and patched iOS SDKs
         run: |
-          git clone --recursive --depth 1 https://github.com/theos/theos.git "$GITHUB_WORKSPACE/theos"
+          git clone --recursive --depth 1 https://github.com/roothide/theos.git "$GITHUB_WORKSPACE/theos"
           rm -rf "$GITHUB_WORKSPACE/theos/sdks"
           git clone --depth 1 https://github.com/theos/sdks.git "$GITHUB_WORKSPACE/theos/sdks"
-      - name: Build rootless arm64 and arm64e package
+      - name: Build native RootHide arm64 and arm64e package
         env:
           THEOS: ${{ github.workspace }}/theos
         run: |
           test -f "$THEOS/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/Preferences.framework/Preferences.tbd"
-          make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless messages=yes
+          make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide messages=yes
           mkdir -p artifacts
           cp packages/*.deb artifacts/
           dpkg-deb --info artifacts/*.deb
@@ -30,6 +30,6 @@ jobs:
       - name: Upload DEB
         uses: actions/upload-artifact@v4
         with:
-          name: CPUthermal-L-iOS18-rootless
+          name: CPUthermal-L-iOS18-RootHide
           path: artifacts/*.deb
           if-no-files-found: error

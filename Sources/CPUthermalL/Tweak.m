@@ -37,6 +37,7 @@ static NSInteger gHookCount = 0;
 static __weak id gCommonProduct;
 static __weak id gMitigationController;
 static NSMutableDictionary<NSString *, NSNumber *> *gObservedMax;
+static NSMutableDictionary<NSString *, NSNumber *> *gObservedDisplayMax;
 static int gThermalNotifyTokens[64];
 static int gThermalNotifyTokenCount = 0;
 static dispatch_source_t gTimer;
@@ -62,7 +63,7 @@ static void LoadConfig(void) {
     c.fullPower = ![mode isEqualToString:@"lowPower"];
     c.preventDimming = p[@"preventThermalDimming"] ? [p[@"preventThermalDimming"] boolValue] : (p[@"thermalPreventDimmingEnabled"] ? [p[@"thermalPreventDimmingEnabled"] boolValue] : YES);
     c.suppressWarnings = [p[@"suppressThermalWarnings"] boolValue] || [p[@"thermalBlockNotifPopup"] boolValue];
-    c.emergencyFallback = p[@"emergencyFallbackEnabled"] ? [p[@"emergencyFallbackEnabled"] boolValue] : YES;
+    c.emergencyFallback = p[@"emergencyFallbackEnabled"] ? [p[@"emergencyFallbackEnabled"] boolValue] : NO;
     c.targetPercent = p[@"fullPowerTargetPercent"] ? [p[@"fullPowerTargetPercent"] integerValue] : 100;
     if (c.targetPercent < 50 || c.targetPercent > 100) c.targetPercent = 100;
     c.emergencyTemperature = p[@"emergencyTemperatureC"] ? [p[@"emergencyTemperatureC"] doubleValue] : 78.0;
@@ -98,6 +99,17 @@ static NSNumber *ClampedNumber(NSNumber *value, NSString *key) {
     }
 }
 
+static NSNumber *ClampedDisplayNumber(NSNumber *value, NSString *key) {
+    if (![value isKindOfClass:NSNumber.class]) return value;
+    @synchronized (gObservedDisplayMax) {
+        double incoming = value.doubleValue;
+        double baseline = [gObservedDisplayMax[key] doubleValue];
+        if (incoming > baseline) { baseline = incoming; gObservedDisplayMax[key] = @(incoming); }
+        if (!CanOverride() || !Config().preventDimming || baseline <= 0) return value;
+        return @(MAX(incoming, baseline));
+    }
+}
+
 static BOOL KeyContains(NSString *key, NSArray<NSString *> *needles) {
     NSString *lower = key.lowercaseString;
     for (NSString *n in needles) if ([lower containsString:n]) return YES;
@@ -110,6 +122,10 @@ static id PatchObject(id object, NSString *contextKey) {
         for (id keyObj in [m.allKeys copy]) {
             NSString *key = [keyObj description]; id value = m[keyObj];
             if (CanOverride() && KeyContains(key, @[@"thermalthrottleenabled", @"expectscpmssupport"])) m[keyObj] = @NO;
+            else if (CanOverride() && Config().preventDimming && KeyContains(key, @[@"backlightcomponentcontrol", @"backlightbrightness", @"backlightpower", @"displaybrightness", @"displaypower"])) {
+                if ([value isKindOfClass:NSNumber.class]) m[keyObj] = ClampedDisplayNumber(value, key);
+                else m[keyObj] = PatchObject(value, key);
+            }
             else if (CanOverride() && KeyContains(key, @[@"cpumaxpower", @"cpupowerceiling", @"cpupowerfloor", @"cpupowerzone", @"thermalpowercap", @"maxthermalpower", @"minthermalpower"]) && [value isKindOfClass:NSNumber.class]) m[keyObj] = ClampedNumber(value, key);
             else m[keyObj] = PatchObject(value, key);
         }
@@ -117,11 +133,12 @@ static id PatchObject(id object, NSString *contextKey) {
     }
     if ([object isKindOfClass:NSArray.class]) {
         NSMutableArray *a = [object mutableCopy];
-        if (CanOverride() && Config().preventDimming && KeyContains(contextKey ?: @"", @[@"backlightbrightness", @"backlightpower"]) && a.count) {
+        if (CanOverride() && Config().preventDimming && KeyContains(contextKey ?: @"", @[@"backlightcomponentcontrol", @"backlightbrightness", @"backlightpower", @"displaybrightness", @"displaypower"]) && a.count) {
             id nominal = a.firstObject; for (NSUInteger i = 1; i < a.count; i++) a[i] = nominal;
         } else for (NSUInteger i = 0; i < a.count; i++) a[i] = PatchObject(a[i], contextKey);
         return a;
     }
+    if ([object isKindOfClass:NSNumber.class] && CanOverride() && Config().preventDimming && KeyContains(contextKey ?: @"", @[@"backlightcomponentcontrol", @"backlightbrightness", @"backlightpower", @"displaybrightness", @"displaypower"])) return ClampedDisplayNumber(object, contextKey);
     return object;
 }
 
@@ -200,13 +217,29 @@ static kern_return_t hookIOSetProperty(io_registry_entry_t entry, CFStringRef ke
         NSString *service = [NSString stringWithUTF8String:raw] ?: @""; id patched = value;
         if (CanOverride() && [service.lowercaseString containsString:@"cpu"] && [value isKindOfClass:NSNumber.class]) patched = ClampedNumber(value, key);
         if (CanOverride() && KeyContains(key, @[@"thermalthrottleenabled"])) patched = @NO;
-        if (CanOverride() && Config().preventDimming && KeyContains(service, @[@"backlight", @"display"])) patched = PatchObject(value, key);
+        NSString *displayContext = [NSString stringWithFormat:@"%@.%@", service, key ?: @""];
+        if (CanOverride() && Config().preventDimming && KeyContains(displayContext, @[@"backlight", @"brightness", @"displaypower"])) {
+            patched = [value isKindOfClass:NSNumber.class] ? ClampedDisplayNumber(value, displayContext) : PatchObject(value, displayContext);
+        }
         return origIOSetProperty(entry, keyRef, (__bridge CFTypeRef)patched);
     }
 }
 static kern_return_t (*origIOSetProperties)(io_registry_entry_t, CFTypeRef);
 static kern_return_t hookIOSetProperties(io_registry_entry_t entry, CFTypeRef properties) {
     @autoreleasepool { id p = PatchObject((__bridge id)properties, @"IORegistry"); return origIOSetProperties(entry, (__bridge CFTypeRef)p); }
+}
+
+static kern_return_t (*origIOServiceSetProperty)(io_registry_entry_t, CFStringRef, CFTypeRef);
+static kern_return_t hookIOServiceSetProperty(io_registry_entry_t entry, CFStringRef keyRef, CFTypeRef valueRef) {
+    @autoreleasepool {
+        NSString *key = (__bridge NSString *)keyRef; id value = (__bridge id)valueRef; io_name_t raw = {0}; IORegistryEntryGetName(entry, raw);
+        NSString *service = [NSString stringWithUTF8String:raw] ?: @"";
+        NSString *context = [NSString stringWithFormat:@"%@.%@", service, key ?: @""];
+        id patched = value;
+        if (CanOverride() && KeyContains(context, @[@"cpu", @"ppm", @"processor"]) && [value isKindOfClass:NSNumber.class] && KeyContains(key, @[@"power", @"ceiling", @"target", @"limit", @"freq"])) patched = ClampedNumber(value, context);
+        if (CanOverride() && Config().preventDimming && KeyContains(context, @[@"backlight", @"brightness", @"displaypower"])) patched = [value isKindOfClass:NSNumber.class] ? ClampedDisplayNumber(value, context) : PatchObject(value, context);
+        return origIOServiceSetProperty(entry, keyRef, (__bridge CFTypeRef)patched);
+    }
 }
 
 // Thermal notification state is normalized at the source while full-power override is active.
@@ -240,6 +273,8 @@ static void (*origRespondThermal)(id, SEL);
 static void hookRespondThermal(id self, SEL _cmd) { if (!(Config().enabled && Config().fullPower && Config().preventDimming && !gEmergency)) origRespondThermal(self, _cmd); }
 static long long (*origStatusProvider)(id, SEL);
 static long long hookStatusProvider(id self, SEL _cmd) { return (Config().enabled && Config().suppressWarnings && !gEmergency) ? 0 : origStatusProvider(self, _cmd); }
+static void (*origUpdateAlwaysOnThermalState)(id, SEL);
+static void hookUpdateAlwaysOnThermalState(id self, SEL _cmd) { if (!BlockDimming()) origUpdateAlwaysOnThermalState(self, _cmd); }
 
 static double NormalizeTemperature(long long raw) {
     double v = llabs(raw); if (v > 10000) v /= 1000.0; else if (v > 1000) v /= 100.0; else if (v > 200) v /= 10.0; return v;
@@ -263,54 +298,59 @@ static void ApplyMode(void) {
 }
 
 static void InstallThermalHooks(void) {
-    HookClass("NSDictionary", "dictionaryWithContentsOfFile:", (IMP)hookDictionaryWithFile, (IMP *)&origDictionaryWithFile);
-    HookInstance("CommonProduct", "initProduct:", (IMP)hookInitProduct, (IMP *)&origInitProduct);
-    HookInstance("CommonProduct", "tryTakeAction", (IMP)hookTryTakeAction, (IMP *)&origTryTakeAction);
-    HookInstance("CommonProduct", "simulateLightThermalPressure", (IMP)hookSimulateLight, (IMP *)&origSimulateLight);
-    HookInstance("CommonProduct", "putDeviceInThermalSimulationMode:", (IMP)hookPuppet, (IMP *)&origPuppet);
-    HookInstance("CommonProduct", "thermalPressureLevel", (IMP)hookPressure, (IMP *)&origPressure);
-    HookInstance("CommonProduct", "getPotentialForcedThermalPressureLevel", (IMP)hookForcedPressure, (IMP *)&origForcedPressure);
-    HookInstance("CommonProduct", "getPotentialForcedThermalLevel:", (IMP)hookForcedLevel, (IMP *)&origForcedLevel);
-    HookInstance("CommonProduct", "setThermalState:", (IMP)hookSetThermalState, (IMP *)&origSetThermalState);
-    HookInstance("MitigationController", "initForFastLoop:noDisplay:powerSaveParams:powerZoneParams:", (IMP)hookMitigationInit, (IMP *)&origMitigationInit);
-    HookInstance("MitigationController", "setPowerSaveActive:", (IMP)hookPowerSave, (IMP *)&origPowerSave);
-    HookInstance("MitigationController", "setCPMSMitigationsEnabled:", (IMP)hookMitigationsEnabled, (IMP *)&origMitigationsEnabled);
-    HookInstance("MitigationController", "setCPULevel:", (IMP)hookCPULevel, (IMP *)&origCPULevel);
-    HookInstance("MitigationController", "setCPUPowerZoneTarget:", (IMP)hookOneIntTarget, (IMP *)&origOneIntTarget);
-    HookInstance("MitigationController", "setCPUPowerCeiling:fromDecisionSource:", (IMP)hookTwoIntTargetA, (IMP *)&origTwoIntTargetA);
-    HookInstance("MitigationController", "setCPUPowerCeiling:forDVD1Contributor:", (IMP)hookTwoIntTargetB, (IMP *)&origTwoIntTargetB);
-    HookInstance("MitigationController", "setMaxCPUPowerTarget:useLegacyPath:setProperty:", (IMP)hookMaxTarget, (IMP *)&origMaxTarget);
-    void *p = dlsym(RTLD_DEFAULT, "IORegistryEntrySetCFProperty"); if (p) { MSHookFunction(p, (void *)hookIOSetProperty, (void **)&origIOSetProperty); gHookCount++; }
-    p = dlsym(RTLD_DEFAULT, "IORegistryEntrySetCFProperties"); if (p) { MSHookFunction(p, (void *)hookIOSetProperties, (void **)&origIOSetProperties); gHookCount++; }
-    p = dlsym(RTLD_DEFAULT, "notify_register_check"); if (p) { MSHookFunction(p, (void *)hookNotifyRegisterCheck, (void **)&origNotifyRegisterCheck); gHookCount++; }
-    p = dlsym(RTLD_DEFAULT, "notify_set_state"); if (p) { MSHookFunction(p, (void *)hookNotifySetState, (void **)&origNotifySetState); gHookCount++; }
+    if (!origDictionaryWithFile) HookClass("NSDictionary", "dictionaryWithContentsOfFile:", (IMP)hookDictionaryWithFile, (IMP *)&origDictionaryWithFile);
+    if (!origInitProduct) HookInstance("CommonProduct", "initProduct:", (IMP)hookInitProduct, (IMP *)&origInitProduct);
+    if (!origTryTakeAction) HookInstance("CommonProduct", "tryTakeAction", (IMP)hookTryTakeAction, (IMP *)&origTryTakeAction);
+    if (!origSimulateLight) HookInstance("CommonProduct", "simulateLightThermalPressure", (IMP)hookSimulateLight, (IMP *)&origSimulateLight);
+    if (!origPuppet) HookInstance("CommonProduct", "putDeviceInThermalSimulationMode:", (IMP)hookPuppet, (IMP *)&origPuppet);
+    if (!origPressure) HookInstance("CommonProduct", "thermalPressureLevel", (IMP)hookPressure, (IMP *)&origPressure);
+    if (!origForcedPressure) HookInstance("CommonProduct", "getPotentialForcedThermalPressureLevel", (IMP)hookForcedPressure, (IMP *)&origForcedPressure);
+    if (!origForcedLevel) HookInstance("CommonProduct", "getPotentialForcedThermalLevel:", (IMP)hookForcedLevel, (IMP *)&origForcedLevel);
+    if (!origSetThermalState) HookInstance("CommonProduct", "setThermalState:", (IMP)hookSetThermalState, (IMP *)&origSetThermalState);
+    if (!origMitigationInit) HookInstance("MitigationController", "initForFastLoop:noDisplay:powerSaveParams:powerZoneParams:", (IMP)hookMitigationInit, (IMP *)&origMitigationInit);
+    if (!origPowerSave) HookInstance("MitigationController", "setPowerSaveActive:", (IMP)hookPowerSave, (IMP *)&origPowerSave);
+    if (!origMitigationsEnabled) HookInstance("MitigationController", "setCPMSMitigationsEnabled:", (IMP)hookMitigationsEnabled, (IMP *)&origMitigationsEnabled);
+    if (!origCPULevel) HookInstance("MitigationController", "setCPULevel:", (IMP)hookCPULevel, (IMP *)&origCPULevel);
+    if (!origOneIntTarget) HookInstance("MitigationController", "setCPUPowerZoneTarget:", (IMP)hookOneIntTarget, (IMP *)&origOneIntTarget);
+    if (!origTwoIntTargetA) HookInstance("MitigationController", "setCPUPowerCeiling:fromDecisionSource:", (IMP)hookTwoIntTargetA, (IMP *)&origTwoIntTargetA);
+    if (!origTwoIntTargetB) HookInstance("MitigationController", "setCPUPowerCeiling:forDVD1Contributor:", (IMP)hookTwoIntTargetB, (IMP *)&origTwoIntTargetB);
+    if (!origMaxTarget) HookInstance("MitigationController", "setMaxCPUPowerTarget:useLegacyPath:setProperty:", (IMP)hookMaxTarget, (IMP *)&origMaxTarget);
+    void *p = NULL;
+    if (!origIOSetProperty && (p = dlsym(RTLD_DEFAULT, "IORegistryEntrySetCFProperty"))) { MSHookFunction(p, (void *)hookIOSetProperty, (void **)&origIOSetProperty); gHookCount++; }
+    if (!origIOSetProperties && (p = dlsym(RTLD_DEFAULT, "IORegistryEntrySetCFProperties"))) { MSHookFunction(p, (void *)hookIOSetProperties, (void **)&origIOSetProperties); gHookCount++; }
+    if (!origIOServiceSetProperty && (p = dlsym(RTLD_DEFAULT, "IOServiceSetProperty"))) { MSHookFunction(p, (void *)hookIOServiceSetProperty, (void **)&origIOServiceSetProperty); gHookCount++; }
+    if (!origNotifyRegisterCheck && (p = dlsym(RTLD_DEFAULT, "notify_register_check"))) { MSHookFunction(p, (void *)hookNotifyRegisterCheck, (void **)&origNotifyRegisterCheck); gHookCount++; }
+    if (!origNotifySetState && (p = dlsym(RTLD_DEFAULT, "notify_set_state"))) { MSHookFunction(p, (void *)hookNotifySetState, (void **)&origNotifySetState); gHookCount++; }
 }
 
 static void InstallSpringBoardHooks(void) {
-    HookInstance("SBThermalController", "isThermalBlocked", (IMP)hookThermalBlocked, (IMP *)&origThermalBlocked);
-    HookInstance("SBThermalController", "_isBlocked", (IMP)hookInternalBlocked, (IMP *)&origInternalBlocked);
-    HookInstance("SBThermalController", "level", (IMP)hookThermalLevel, (IMP *)&origThermalLevel);
-    HookInstance("SBThermalController", "_setBlocked:", (IMP)hookSetBlocked, (IMP *)&origSetBlocked);
-    HookInstance("SBThermalController", "_respondToCurrentThermalCondition", (IMP)hookRespondThermal, (IMP *)&origRespondThermal);
-    HookInstance("SBThermalAlwaysOnPolicy", "_isThermallyBlocked", (IMP)hookAlwaysOnBlocked, (IMP *)&origAlwaysOnBlocked);
-    HookInstance("SBThermalAlwaysOnPolicy", "_setThermallyBlocked:", (IMP)hookSetAlwaysOnBlocked, (IMP *)&origSetAlwaysOnBlocked);
-    HookInstance("SBDashBoardThermalStatusProvider", "thermalStatus", (IMP)hookStatusProvider, (IMP *)&origStatusProvider);
+    if (!origThermalBlocked) HookInstance("SBThermalController", "isThermalBlocked", (IMP)hookThermalBlocked, (IMP *)&origThermalBlocked);
+    if (!origInternalBlocked) HookInstance("SBThermalController", "_isBlocked", (IMP)hookInternalBlocked, (IMP *)&origInternalBlocked);
+    if (!origThermalLevel) HookInstance("SBThermalController", "level", (IMP)hookThermalLevel, (IMP *)&origThermalLevel);
+    if (!origSetBlocked) HookInstance("SBThermalController", "_setBlocked:", (IMP)hookSetBlocked, (IMP *)&origSetBlocked);
+    if (!origRespondThermal) HookInstance("SBThermalController", "_respondToCurrentThermalCondition", (IMP)hookRespondThermal, (IMP *)&origRespondThermal);
+    if (!origAlwaysOnBlocked) HookInstance("SBThermalAlwaysOnPolicy", "_isThermallyBlocked", (IMP)hookAlwaysOnBlocked, (IMP *)&origAlwaysOnBlocked);
+    if (!origSetAlwaysOnBlocked) HookInstance("SBThermalAlwaysOnPolicy", "_setThermallyBlocked:", (IMP)hookSetAlwaysOnBlocked, (IMP *)&origSetAlwaysOnBlocked);
+    if (!origUpdateAlwaysOnThermalState) HookInstance("SBThermalAlwaysOnPolicy", "_updateThermalState", (IMP)hookUpdateAlwaysOnThermalState, (IMP *)&origUpdateAlwaysOnThermalState);
+    if (!origStatusProvider) HookInstance("SBDashBoardThermalStatusProvider", "thermalStatus", (IMP)hookStatusProvider, (IMP *)&origStatusProvider);
 }
 
 static void SettingsChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) { LoadConfig(); ApplyMode(); }
 
 static void TimerTick(void) {
     if (IsThermalProcess()) {
+        InstallThermalHooks();
         BOOL before = gEmergency; SampleTemperature(); ApplyMode();
         if (before != gEmergency || (++gStatusTick % 8) == 0) WriteStatus();
     } else if (IsSpringBoard()) {
+        InstallSpringBoardHooks();
         NSDictionary *s = ReadDictionary(kStatusPath); gEmergency = [s[@"emergency"] boolValue]; gTemperature = [s[@"temperatureC"] doubleValue];
     }
 }
 
 __attribute__((constructor)) static void CPUthermalLInit(void) {
     @autoreleasepool {
-        gObservedMax = [NSMutableDictionary dictionary]; LoadConfig();
+        gObservedMax = [NSMutableDictionary dictionary]; gObservedDisplayMax = [NSMutableDictionary dictionary]; LoadConfig();
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, SettingsChanged, CFSTR("com.riboly.cputhermal-l/settingsChanged"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
         if (IsThermalProcess()) {
             InstallThermalHooks();

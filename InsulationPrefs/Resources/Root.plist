@@ -13,8 +13,8 @@
 		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>fullPowerTargetPercent</string><key>default</key><integer>100</integer><key>label</key><string>高频目标</string><key>validValues</key><array><integer>75</integer><integer>90</integer><integer>100</integer></array><key>validTitles</key><array><string>平衡 75%</string><string>增强 90%</string><string>最高 100%</string></array><key>requiresMode</key><string>fullPower</string></dict>
 		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>preventThermalDimming</string><key>default</key><true/><key>label</key><string>阻止高温降低屏幕亮度</string><key>requiresMode</key><string>fullPower</string></dict>
 		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>suppressThermalWarnings</string><key>default</key><false/><key>label</key><string>隐藏高温警告界面</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>极端温度回退</string><key>footerText</key><string>达到阈值后暂时放行系统热保护，降到阈值以下 5°C 后自动恢复解除温控。硬件级保护不受插件控制。</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>emergencyFallbackEnabled</string><key>default</key><true/><key>label</key><string>启用极端温度回退</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>极端温度回退</string><key>footerText</key><string>默认关闭，避免观看 4K 视频时因软件回退重新触发降频与暗屏。打开后达到阈值会暂时放行系统热保护；硬件最终保护始终存在。</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>emergencyFallbackEnabled</string><key>default</key><false/><key>label</key><string>启用软件极端温度回退</string><key>requiresMode</key><string>fullPower</string></dict>
 		<dict><key>cell</key><string>PSSliderCell</string><key>key</key><string>emergencyTemperatureC</string><key>default</key><real>78</real><key>label</key><string>回退阈值（°C）</string><key>min</key><real>70</real><key>max</key><real>90</real><key>showValue</key><true/><key>requiresMode</key><string>fullPower</string></dict>
 		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>应用与诊断</string><key>footerText</key><string>“即时应用”通常无需重启。安装新版本或进程未注入时可单独重启 thermalmonitord；重启桌面会重新加载屏幕调暗 Hook。</string></dict>
 		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>查看运行诊断</string><key>action</key><string>showDiagnostics</string></dict>
@@ -24,8 +24,8 @@
 		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>恢复默认设置</string><key>action</key><string>resetSettings</string></dict>
 		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>项目</string></dict>
 		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>GitHub · riboly/CPUthermal-L</string><key>action</key><string>openSourceCode</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>实时监控</string><key>footerText</key><string>每秒读取 IOReport 的 ECPU/PCPU 性能状态驻留时间并换算平均频率；iOS 18 已移除 hw.cpufrequency，因此不使用 24 MHz 时基冒充 CPU 频率。</string></dict>
-		<dict><key>cell</key><string>PSTitleValueCell</string><key>id</key><string>cpuFrequency</string><key>key</key><string>liveCPUFrequency</string><key>label</key><string>实时 CPU 频率</string><key>default</key><string>正在采样…</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>实时监控</string><key>footerText</key><string>仅当这个设置页面位于前台时，每秒读取一次 IOReport 与温度信息；离开页面或设置应用进入后台后会销毁定时器和采样订阅，不产生持续 CPU 开销。</string></dict>
+		<dict><key>cell</key><string>PSStaticTextCell</string><key>cellClass</key><string>CTLMonitorCell</string><key>id</key><string>cpuMonitor</string><key>height</key><real>190</real><key>monitorText</key><string>正在建立 1 秒采样窗口…</string></dict>
 	</array>
 </dict>
 </plist>

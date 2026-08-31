@@ -1,6 +1,6 @@
 ARCHS = arm64 arm64e
 TARGET = iphone:clang:16.5:15.0
-THEOS_PACKAGE_SCHEME ?= rootless
+THEOS_PACKAGE_SCHEME ?= roothide
 
 INSTALL_TARGET_PROCESSES = thermalmonitord SpringBoard
 
@@ -10,7 +10,7 @@ TWEAK_NAME = CPUthermalL
 CPUthermalL_FILES = Sources/CPUthermalL/Tweak.m
 CPUthermalL_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 CPUthermalL_FRAMEWORKS = Foundation IOKit
-CPUthermalL_LIBRARIES = substrate
+CPUthermalL_LIBRARIES = substrate roothide
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
