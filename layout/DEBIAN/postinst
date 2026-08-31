@@ -1,2 +1,4 @@
-#!/bin/bash
-killall  thermalmonitord
+#!/bin/sh
+killall -TERM thermalmonitord 2>/dev/null || true
+killall -TERM SpringBoard 2>/dev/null || true
+exit 0

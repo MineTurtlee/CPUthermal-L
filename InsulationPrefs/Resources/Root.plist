@@ -2,70 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>title</key><string>CPUthermal-L</string>
 	<key>items</key>
 	<array>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>温控锁定CPU频率值</string>
-			<key>footerText</key>
-			<string>由于无法从硬件中读取到真实的CPU最大频率，所以频率需要自己输入，然后重启用户空间、或者重新安装一下插件即可生效。（不建议过小以及过大，按照CPU合理范围填写就行，否则可能存在隐患。）</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string></string>
-			<key>defaults</key>
-			<string>com.be-huge.insulation-prefs</string>
-			<key>keyboard</key>
-			<string>numbers</string>
-			<key>isURL</key>
-			<string>false</string>
-			<key>isNumeric</key>
-			<string>true</string>
-			<key>isIP</key>
-			<string>true</string>
-			<key>key</key>
-			<string>cpuMinPowerValue</string>
-			<key>placeholder</key>
-			<string>仅支持数字，否则不生效。</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>降低频率（模拟）</string>
-			<key>footerText</key>
-			<string>我也不知道这个功能有什么用，但要就支持一下吧。</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSSegmentCell</string>
-			<key>default</key>
-			<string>nominal</string>
-			<key>defaults</key>
-			<string>com.be-huge.insulation-prefs</string>
-			<key>key</key>
-			<string>thermalPuppetValue</string>
-			<key>validValues</key>
-			<array>
-				<string>nominal</string>
-				<string>light</string>
-				<string>moderate</string>
-				<string>heavy</string>
-			</array>
-			<key>validTitles</key>
-			<array>
-				<string>无</string>
-				<string>轻微</string>
-				<string>中度</string>
-				<string>重度</string>
-			</array>
-		</dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>总开关</string><key>footerText</key><string>iOS 18 双进程方案：thermalmonitord 负责 CPU/功耗限制，SpringBoard 负责热状态触发的屏幕调暗。修改后即时通知两个进程。</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>enabled</string><key>default</key><true/><key>label</key><string>启用 CPUthermal-L</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>运行模式</string><key>footerText</key><string>低功耗会主动启用 PowerSave 并限制性能等级；解除温控会阻止新的 CPU 热功耗上限下调，并恢复名义热状态。</string></dict>
+		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>powerMode</string><key>default</key><string>fullPower</string><key>label</key><string>模式</string><key>validValues</key><array><string>lowPower</string><string>fullPower</string></array><key>validTitles</key><array><string>低功耗</string><string>解除温控</string></array></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>解除温控高频目标</string><key>footerText</key><string>仅在“解除温控”模式显示。这里按系统启动阶段采集到的名义功耗基线进行比例钳制，不再把 MHz 错当成 mW 写入 ThermalMonitor。</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>fullPowerTargetPercent</string><key>default</key><integer>100</integer><key>label</key><string>高频目标</string><key>validValues</key><array><integer>75</integer><integer>90</integer><integer>100</integer></array><key>validTitles</key><array><string>平衡 75%</string><string>增强 90%</string><string>最高 100%</string></array><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>preventThermalDimming</string><key>default</key><true/><key>label</key><string>阻止高温降低屏幕亮度</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>suppressThermalWarnings</string><key>default</key><false/><key>label</key><string>隐藏高温警告界面</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>极端温度回退</string><key>footerText</key><string>达到阈值后暂时放行系统热保护，降到阈值以下 5°C 后自动恢复解除温控。硬件级保护不受插件控制。</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>emergencyFallbackEnabled</string><key>default</key><true/><key>label</key><string>启用极端温度回退</string><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSSliderCell</string><key>key</key><string>emergencyTemperatureC</string><key>default</key><real>78</real><key>label</key><string>回退阈值（°C）</string><key>min</key><real>70</real><key>max</key><real>90</real><key>showValue</key><true/><key>requiresMode</key><string>fullPower</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>应用与诊断</string><key>footerText</key><string>“即时应用”通常无需重启。安装新版本或进程未注入时可单独重启 thermalmonitord；重启桌面会重新加载屏幕调暗 Hook。</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>查看运行诊断</string><key>action</key><string>showDiagnostics</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>即时应用设置</string><key>action</key><string>applySettings</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>重启 thermalmonitord</string><key>action</key><string>restartThermalDaemon</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>重启桌面</string><key>action</key><string>respring</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>恢复默认设置</string><key>action</key><string>resetSettings</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>项目</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>GitHub · riboly/CPUthermal-L</string><key>action</key><string>openSourceCode</string></dict>
 	</array>
-	<key>title</key>
-	<string>Insulation</string>
 </dict>
 </plist>

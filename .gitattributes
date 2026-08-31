@@ -1,0 +1,6 @@
+*.sh text eol=lf
+Makefile text eol=lf
+postinst text eol=lf
+*.m text eol=lf
+*.plist text eol=lf
+*.yml text eol=lf

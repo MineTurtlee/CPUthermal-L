@@ -1,0 +1,33 @@
+name: Build CPUthermal-L
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-rootless:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install ldid xz dpkg
+      - name: Install Theos and patched iOS SDKs
+        run: |
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$GITHUB_WORKSPACE/theos"
+          git clone --depth 1 https://github.com/theos/sdks.git "$GITHUB_WORKSPACE/theos/sdks"
+      - name: Build rootless arm64 and arm64e package
+        env:
+          THEOS: ${{ github.workspace }}/theos
+        run: |
+          make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless messages=yes
+          mkdir -p artifacts
+          cp packages/*.deb artifacts/
+          dpkg-deb --info artifacts/*.deb
+          dpkg-deb --contents artifacts/*.deb
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: CPUthermal-L-iOS18-rootless
+          path: artifacts/*.deb
+          if-no-files-found: error

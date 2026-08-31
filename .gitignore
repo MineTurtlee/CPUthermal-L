@@ -8,4 +8,5 @@ xcuserdata/
 /packages
 .theos/
 packages/
+work/
 .DS_Store
