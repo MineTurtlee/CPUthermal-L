@@ -51,6 +51,9 @@ jobs:
           test -f "$THEOS/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/Preferences.framework/Preferences.tbd"
           
           cd ${{ github.workspace }}
+
+          sed -i '' 's/CPUthermalLPrefs_LIBRARIES = roothide/CPUthermalLPrefs_LIBRARIES = rootless/g' ./InsulationPrefs/Makefile
+          
           chmod +x rootless_build.sh
           ./rootless_build.sh
           
