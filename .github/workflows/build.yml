@@ -52,7 +52,8 @@ jobs:
           
           cd ${{ github.workspace }}
 
-          find . -type f -print0 | xargs -0 sed -i 's/roothide/rootless/gI'
+          sed -i '' 's/roothide/rootless/gI' Makefile
+          sed -i '' 's/roothide/rootless/gI' InsulationPrefs/Makefile
           sed -i '' 's/arm64e/arm64/g' control
           
           chmod +x rootless_build.sh
