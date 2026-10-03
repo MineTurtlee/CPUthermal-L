@@ -5,27 +5,27 @@
 	<key>title</key><string>CPUthermal-L</string>
 	<key>items</key>
 	<array>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>总开关</string><key>footerText</key><string>iOS 18 双进程方案：thermalmonitord 负责 CPU/功耗限制，SpringBoard 负责热状态触发的屏幕调暗。修改后即时通知两个进程。</string></dict>
-		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>enabled</string><key>default</key><true/><key>label</key><string>启用 CPUthermal-L</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>运行模式</string><key>footerText</key><string>低功耗会主动启用 PowerSave 并限制性能等级；解除温控会阻止新的 CPU 热功耗上限下调，并恢复名义热状态。</string></dict>
-		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>powerMode</string><key>default</key><string>fullPower</string><key>label</key><string>模式</string><key>validValues</key><array><string>lowPower</string><string>fullPower</string></array><key>validTitles</key><array><string>低功耗</string><string>解除温控</string></array></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>解除温控高频目标</string><key>footerText</key><string>仅在“解除温控”模式显示。这里按系统启动阶段采集到的名义功耗基线进行比例钳制，不再把 MHz 错当成 mW 写入 ThermalMonitor。</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>fullPowerTargetPercent</string><key>default</key><integer>100</integer><key>label</key><string>高频目标</string><key>validValues</key><array><integer>75</integer><integer>90</integer><integer>100</integer></array><key>validTitles</key><array><string>平衡 75%</string><string>增强 90%</string><string>最高 100%</string></array><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>preventThermalDimming</string><key>default</key><true/><key>label</key><string>阻止高温降低屏幕亮度</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>suppressThermalWarnings</string><key>default</key><false/><key>label</key><string>隐藏高温警告界面</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>极端温度回退</string><key>footerText</key><string>默认关闭，避免观看 4K 视频时因软件回退重新触发降频与暗屏。打开后达到阈值会暂时放行系统热保护；硬件最终保护始终存在。</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>emergencyFallbackEnabled</string><key>default</key><false/><key>label</key><string>启用软件极端温度回退</string><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSSliderCell</string><key>key</key><string>emergencyTemperatureC</string><key>default</key><real>78</real><key>label</key><string>回退阈值（°C）</string><key>min</key><real>70</real><key>max</key><real>90</real><key>showValue</key><true/><key>requiresMode</key><string>fullPower</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>应用与诊断</string><key>footerText</key><string>“即时应用”通常无需重启。安装新版本或进程未注入时可单独重启 thermalmonitord；重启桌面会重新加载屏幕调暗 Hook。</string></dict>
-		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>查看运行诊断</string><key>action</key><string>showDiagnostics</string></dict>
-		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>即时应用设置</string><key>action</key><string>applySettings</string></dict>
-		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>重启 thermalmonitord</string><key>action</key><string>restartThermalDaemon</string></dict>
-		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>重启桌面</string><key>action</key><string>respring</string></dict>
-		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>恢复默认设置</string><key>action</key><string>resetSettings</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>项目</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Main Switch</string><key>footerText</key><string>iOS 18 dual-process design: thermalmonitord handles CPU/power limits, SpringBoard handles display thermal dimming.</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>enabled</string><key>default</key><true/><key>label</key><string>Enable CPUthermal-L</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Operating Mode</string><key>footerText</key><string>Low Power actively enables Power Save and limits performance tier; Thermal Release disables throttling and raises CPU targets.</string></dict>
+		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>powerMode</string><key>default</key><string>fullPower</string><key>label</key><string>Mode</string><key>validValues</key><array><string>fullPower</string><string>lowPower</string></array><key>titles</key><array><string>Thermal Release</string><string>Low Power</string></array></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Thermal-Release High-Frequency Target</string><key>footerText</key><string>Only shown in "Thermal Release" mode. System nominal baseline is used to clamp high-frequency targets.</string></dict>
+		<dict><key>cell</key><string>PSSegmentCell</string><key>key</key><string>fullPowerTargetPercent</string><key>default</key><integer>100</integer><key>label</key><string>High-Frequency Target</string><key>validValues</key><array><string>75</string><string>90</string><string>100</string></array><key>titles</key><array><string>75%</string><string>90%</string><string>100%</string></array></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>preventThermalDimming</string><key>default</key><true/><key>label</key><string>Prevent Screen Dimming at High Temperature</string><key>respring</key><true/></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>suppressThermalWarnings</string><key>default</key><false/><key>label</key><string>Hide High-Temperature Warning UI</string><key>respring</key><true/></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Extreme Temperature Fallback</string><key>footerText</key><string>Disabled by default to avoid software fallback during 4K video playback. Enable to protect hardware in extreme situations.</string></dict>
+		<dict><key>cell</key><string>PSSwitchCell</string><key>key</key><string>emergencyFallbackEnabled</string><key>default</key><false/><key>label</key><string>Enable Software Extreme-Temperature Fallback</string><key>respring</key><true/></dict>
+		<dict><key>cell</key><string>PSSliderCell</string><key>key</key><string>emergencyTemperatureC</string><key>default</key><real>78</real><key>label</key><string>Fallback Threshold (°C)</string><key>min</key><real>65</real><key>max</key><real>95</real><key>isSegmented</key><true/><key>segmentCount</key><integer>7</integer></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Application & Diagnostics</string><key>footerText</key><string>"Apply Immediately" usually requires no restart. Installing a new version or process crash may require respring or restart.</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>View Runtime Diagnostics</string><key>action</key><string>showDiagnostics</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>Apply Settings Immediately</string><key>action</key><string>applySettings</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>Restart thermalmonitord</string><key>action</key><string>restartThermalDaemon</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>Respring</string><key>action</key><string>respring</string></dict>
+		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>Restore Default Settings</string><key>action</key><string>resetSettings</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Project</string></dict>
 		<dict><key>cell</key><string>PSButtonCell</string><key>label</key><string>GitHub · riboly/CPUthermal-L</string><key>action</key><string>openSourceCode</string></dict>
-		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>实时监控</string><key>footerText</key><string>仅当这个设置页面位于前台时，每秒读取一次 IOReport 与温度信息；离开页面或设置应用进入后台后会销毁定时器和采样订阅，不产生持续 CPU 开销。</string></dict>
-		<dict><key>cell</key><string>PSStaticTextCell</string><key>cellClass</key><string>CTLMonitorCell</string><key>id</key><string>cpuMonitor</string><key>height</key><real>190</real><key>monitorText</key><string>正在建立 1 秒采样窗口…</string></dict>
+		<dict><key>cell</key><string>PSGroupCell</string><key>label</key><string>Real-Time Monitoring</string><key>footerText</key><string>When this settings page is in the foreground, IOReport is read once per second to display real-time CPU frequency estimates.</string></dict>
+		<dict><key>cell</key><string>PSStaticTextCell</string><key>cellClass</key><string>CTLMonitorCell</string><key>id</key><string>cpuMonitor</string><key>height</key><real>190</real><key>monitorText</key><string>P-core avg: -- MHz\nE-core avg: -- MHz\nTemperature: --°C\nEmergency: --\nHooks: --</string></dict>
 	</array>
 </dict>
 </plist>
