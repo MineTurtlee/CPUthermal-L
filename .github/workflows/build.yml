@@ -3,7 +3,7 @@ name: Build CPUthermal-L
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ translate-to-english ]
 
 jobs:
   build-roothide:
