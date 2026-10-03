@@ -10,7 +10,8 @@ TWEAK_NAME = CPUthermalL
 CPUthermalL_FILES = Sources/CPUthermalL/Tweak.m
 CPUthermalL_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 CPUthermalL_FRAMEWORKS = Foundation IOKit
-CPUthermalL_LIBRARIES = substrate roothide
+CPUthermalL_LIBRARIES = substrate 
+# add roothide if roothide
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

@@ -1,12 +1,12 @@
 Package: com.riboly.cputhermal-l
 Name: CPUthermal-L
 Version: 2.1.0
-Architecture: iphoneos-arm64e
+Architecture: iphoneos-arm64
 Description: 面向 iOS 18 RootHide 的 CPU 温控管理。支持解除温控、低功耗、屏幕热调暗拦截、按需实时性能监控和温度显示。
 Maintainer: riboly
 Author: riboly
 Section: Tweaks
-Depends: mobilesubstrate, preferenceloader, roothide
+Depends: mobilesubstrate, preferenceloader
 Conflicts: byg.iosios.net.monitor, com.be-huge.insulation
 Replaces: byg.iosios.net.monitor, com.be-huge.insulation
 Provides: com.be-huge.insulation

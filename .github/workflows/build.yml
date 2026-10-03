@@ -22,7 +22,8 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
         run: |
           test -f "$THEOS/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/Preferences.framework/Preferences.tbd"
-          make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide messages=yes
+          chmod +x roothide_build.sh
+          ./roothide_build.sh
           mkdir -p artifacts
           cp packages/*.deb artifacts/
           dpkg-deb --info artifacts/*.deb
@@ -51,10 +52,6 @@ jobs:
           test -f "$THEOS/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/Preferences.framework/Preferences.tbd"
           
           cd ${{ github.workspace }}
-
-          sed -i '' 's/roothide/rootless/gI' Makefile
-          sed -i '' 's/roothide/rootless/gI' InsulationPrefs/Makefile
-          sed -i '' 's/arm64e/arm64/g' control
           
           chmod +x rootless_build.sh
           ./rootless_build.sh
