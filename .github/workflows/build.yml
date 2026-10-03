@@ -52,7 +52,7 @@ jobs:
           
           cd ${{ github.workspace }}
 
-          sed -i '' 's/CPUthermalLPrefs_LIBRARIES = roothide/CPUthermalLPrefs_LIBRARIES = rootless/g' ./InsulationPrefs/Makefile
+          sed -i '' 's/roothide/rootless/gI' ./InsulationPrefs/Makefile
           
           chmod +x rootless_build.sh
           ./rootless_build.sh
